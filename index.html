@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>웨더온 (WeatherOn) - 실시간 현재 날씨 & 예보</title>
+  <meta name="description" content="전 세계 어디서나 현재 날씨와 주간 예보를 실시간으로 조회하세요. 별도의 API 키 없이 빠르고 정확한 기상 정보를 제공합니다.">
+  <meta name="keywords" content="날씨, 현재 날씨, 일기예보, 기상정보, 날씨 앱, weather app">
+
+  <!-- Favicon Emoji -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20width=%22100%22%20height=%22100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
+
+  <!-- Google Fonts: Outfit & Pretendard -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-clear-day">
+  <!-- Dynamic Background Particles/Effects Container -->
+  <div class="bg-effects" id="bgEffects" aria-hidden="true"></div>
+
+  <div class="app-container">
+    <!-- Top Header / Navigation -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon">🌤️</span>
+        <div class="brand-text">
+          <h1 class="brand-title">WeatherOn</h1>
+          <span class="brand-subtitle">실시간 날씨 정보</span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Live Clock -->
+        <div class="live-clock" id="liveClock" title="현재 시각">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span id="currentTime">--:--:--</span>
+        </div>
+
+        <!-- GPS Current Location Button -->
+        <button id="btnGeoLocation" class="control-btn" title="내 위치 날씨 조회" aria-label="현재 내 위치 날씨 조회">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>
+            <circle cx="12" cy="12" r="7"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+          <span class="btn-text">내 위치</span>
+        </button>
+
+        <!-- Temperature Unit Toggle (°C / °F) -->
+        <div class="unit-toggle" role="group" aria-label="온도 단위 선택">
+          <button id="btnUnitC" class="unit-btn active" data-unit="c">°C</button>
+          <button id="btnUnitF" class="unit-btn" data-unit="f">°F</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section" aria-label="지역 검색">
+      <form id="searchForm" class="search-form" role="search" onsubmit="return false;">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            id="cityInput" 
+            class="city-input" 
+            placeholder="지역 또는 도시명을 입력하세요 (예: 서울, 강남구, 부산, 제주, 도쿄, 뉴욕...)" 
+            autocomplete="off"
+            spellcheck="false"
+            required
+            aria-label="날씨를 조회할 지역명 입력"
+          >
+          <button type="button" id="btnClearSearch" class="btn-clear" aria-label="입력 내용 지우기" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <button type="submit" id="btnSearch" class="btn-search">
+          <span class="btn-text">검색</span>
+          <svg class="search-arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Instant Suggestions / Auto-complete Dropdown -->
+      <div id="suggestionsDropdown" class="suggestions-dropdown" hidden></div>
+
+      <!-- Quick Preset Cities -->
+      <div class="quick-cities" aria-label="인기 추천 지역">
+        <span class="quick-label">추천 지역:</span>
+        <div class="quick-tags">
+          <button class="quick-tag-btn" data-city="서울">서울 🇰🇷</button>
+          <button class="quick-tag-btn" data-city="부산">부산 🌊</button>
+          <button class="quick-tag-btn" data-city="제주">제주 🌴</button>
+          <button class="quick-tag-btn" data-city="강원도 강릉">강릉 🏖️</button>
+          <button class="quick-tag-btn" data-city="도쿄">도쿄 🗼</button>
+          <button class="quick-tag-btn" data-city="New York">뉴욕 🗽</button>
+          <button class="quick-tag-btn" data-city="Paris">파리 🥐</button>
+          <button class="quick-tag-btn" data-city="London">런던 ☕</button>
+        </div>
+      </div>
+
+      <!-- Recent Searches History -->
+      <div id="recentSearchesContainer" class="recent-searches-container" hidden>
+        <div class="recent-header">
+          <span class="recent-title">최근 검색:</span>
+          <button id="btnClearHistory" class="btn-clear-history">전체 삭제</button>
+        </div>
+        <div id="recentTags" class="recent-tags"></div>
+      </div>
+    </section>
+
+    <!-- Main Content State Wrapper -->
+    <main class="weather-content" id="weatherContent">
+      <!-- Loading State (Skeleton & Spinner) -->
+      <div id="loadingState" class="state-container loading-state" hidden>
+        <div class="spinner-wrapper">
+          <div class="glow-spinner"></div>
+          <span class="loading-icon">🌤️</span>
+        </div>
+        <p class="state-title" id="loadingText">날씨 정보를 가져오는 중입니다...</p>
+        <p class="state-desc">잠시만 기다려주세요</p>
+      </div>
+
+      <!-- Error State (Notice Banner / Card) -->
+      <div id="errorState" class="state-container error-state" hidden>
+        <div class="state-icon-box error-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <h2 class="state-title" id="errorTitle">지역을 찾을 수 없습니다</h2>
+        <p class="state-desc" id="errorMessage">입력하신 지역명을 다시 한번 확인해주세요. 시, 군, 구 또는 유명 도시명을 입력하시면 더 정확합니다.</p>
+        <div class="error-actions">
+          <button id="btnRetry" class="btn-action">다시 시도하기</button>
+          <button class="btn-action btn-secondary" onclick="document.getElementById('cityInput').focus();">검색창으로 이동</button>
+        </div>
+        <div class="error-suggestions">
+          <span>이런 검색어는 어떠세요?</span>
+          <div class="suggestion-chips">
+            <button class="quick-tag-btn" data-city="서울">서울</button>
+            <button class="quick-tag-btn" data-city="부산">부산</button>
+            <button class="quick-tag-btn" data-city="인천">인천</button>
+            <button class="quick-tag-btn" data-city="대구">대구</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weather Data Display -->
+      <div id="weatherDisplay" class="weather-display" hidden>
+        <!-- Primary Weather Card -->
+        <div class="card main-weather-card">
+          <div class="card-glass-glow"></div>
+          
+          <div class="location-header">
+            <div class="location-info">
+              <div class="location-title-row">
+                <svg class="pin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <h2 id="cityName" class="city-name">서울</h2>
+                <span id="countryBadge" class="country-badge">대한민국</span>
+              </div>
+              <p id="localDateTime" class="local-date-time">2026년 10월 27일 화요일 09:30</p>
+            </div>
+            <div class="update-info">
+              <span class="pulse-dot"></span>
+              <span id="updateTimeText">방금 전 업데이트됨</span>
+            </div>
+          </div>
+
+          <!-- Hero Weather Info: Temp & Illustration -->
+          <div class="hero-weather-grid">
+            <div class="hero-temp-block">
+              <div class="temp-badge-row">
+                <span id="mainTemp" class="main-temperature">18°</span>
+                <span id="mainUnitSymbol" class="main-unit-symbol">C</span>
+              </div>
+              <div class="apparent-temp-row">
+                <span class="apparent-label">체감온도</span>
+                <span id="apparentTemp" class="apparent-value">17.2°C</span>
+              </div>
+              <div class="temp-range-row">
+                <span class="range-tag min-tag">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 13 12 18 17 13"></polyline></svg>
+                  <span id="minTemp">10°</span>
+                </span>
+                <span class="range-tag max-tag">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 11 12 6 7 11"></polyline></svg>
+                  <span id="maxTemp">21°</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Visual Weather Icon/Badge -->
+            <div class="hero-visual-block">
+              <div class="weather-visual-container">
+                <div id="weatherEmojiGlow" class="weather-emoji-glow"></div>
+                <div id="weatherEmoji" class="weather-emoji" aria-label="날씨 아이콘">🌤️</div>
+              </div>
+              <div class="weather-badge-group">
+                <span id="weatherDesc" class="weather-description">맑음</span>
+                <span id="weatherSummaryBadge" class="weather-tip-badge">야외 활동하기 쾌적해요!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Cards Grid (6 Highlights) -->
+        <div class="metrics-grid" aria-label="상세 기상 지표">
+          <!-- 1. Humidity -->
+          <div class="card metric-card">
+            <div class="metric-icon-box humidity-color">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">현재 습도</span>
+              <div class="metric-value-row">
+                <span id="humidityVal" class="metric-value">48</span>
+                <span class="metric-unit">%</span>
+              </div>
+              <span id="humidityStatus" class="metric-subtext">쾌적한 습도 수준</span>
+            </div>
+          </div>
+
+          <!-- 2. Wind Speed -->
+          <div class="card metric-card">
+            <div class="metric-icon-box wind-color">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"></path>
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">바람 세기</span>
+              <div class="metric-value-row">
+                <span id="windVal" class="metric-value">7.5</span>
+                <span id="windUnit" class="metric-unit">km/h</span>
+              </div>
+              <span id="windStatus" class="metric-subtext">기분 좋은 미풍</span>
+            </div>
+          </div>
+
+          <!-- 3. Precipitation -->
+          <div class="card metric-card">
+            <div class="metric-icon-box rain-color">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path>
+                <line x1="8" y1="19" x2="8" y2="21"></line>
+                <line x1="8" y1="13" x2="8" y2="15"></line>
+                <line x1="16" y1="19" x2="16" y2="21"></line>
+                <line x1="16" y1="13" x2="16" y2="15"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="12" y1="15" x2="12" y2="17"></line>
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">강수량</span>
+              <div class="metric-value-row">
+                <span id="precipVal" class="metric-value">0.0</span>
+                <span class="metric-unit">mm</span>
+              </div>
+              <span id="precipStatus" class="metric-subtext">비 소식 없음</span>
+            </div>
+          </div>
+
+          <!-- 4. Atmospheric Pressure -->
+          <div class="card metric-card">
+            <div class="metric-icon-box pressure-color">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="m14.5 9.5-5 5"></path>
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2"></path>
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">대기압</span>
+              <div class="metric-value-row">
+                <span id="pressureVal" class="metric-value">1018</span>
+                <span class="metric-unit">hPa</span>
+              </div>
+              <span id="pressureStatus" class="metric-subtext">표준 대기압 (안정)</span>
+            </div>
+          </div>
+
+          <!-- 5. Day / Night Status -->
+          <div class="card metric-card">
+            <div class="metric-icon-box sun-color">
+              <svg id="dayNightIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">주간 / 야간</span>
+              <div class="metric-value-row">
+                <span id="dayNightVal" class="metric-value">낮 시간</span>
+              </div>
+              <span id="dayNightStatus" class="metric-subtext">햇살이 비치는 시간</span>
+            </div>
+          </div>
+
+          <!-- 6. Coordinates & Elevation -->
+          <div class="card metric-card">
+            <div class="metric-icon-box coord-color">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">위치 좌표</span>
+              <div class="metric-value-row">
+                <span id="coordsVal" class="metric-value coords-value">37.5°N, 127.0°E</span>
+              </div>
+              <span id="coordsStatus" class="metric-subtext">정밀 GPS 위치</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 24-Hour Hourly Forecast Section -->
+        <section class="card forecast-section" aria-label="시간대별 24시간 예보">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <span class="section-icon">⏱️</span>
+              <h3 class="section-title">24시간 시간별 예보</h3>
+            </div>
+            <span class="section-hint">가로로 스크롤하여 확인하세요</span>
+          </div>
+          <div id="hourlyForecastList" class="hourly-forecast-list" role="list">
+            <!-- Dynamically injected via JS -->
+          </div>
+        </section>
+
+        <!-- 7-Day Daily Forecast Section -->
+        <section class="card forecast-section" aria-label="주간 7일 예보">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <span class="section-icon">📅</span>
+              <h3 class="section-title">주간 7일 예보</h3>
+            </div>
+            <span class="section-hint">기온 변화 그래프</span>
+          </div>
+          <div id="dailyForecastList" class="daily-forecast-list" role="list">
+            <!-- Dynamically injected via JS -->
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p class="footer-text">
+        날씨 데이터 제공: 
+        <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> 
+        · 위치 정보: 
+        <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer">OpenStreetMap Nominatim</a>
+      </p>
+      <p class="footer-subtext">별도의 유료 API 키 없이 누구나 자유롭게 이용할 수 있는 실시간 오픈 기상 웹 애플리케이션입니다.</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
